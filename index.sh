@@ -13,6 +13,11 @@ SCRIPT_AUTHOR="江湖笔者"
 SCRIPT_VERSION="1.0"
 SCRIPT_DESCRIPTION="Linux 模块化配置脚本（All-in-One）"
 
+# 源地址定义
+SOURCE_RULES_KEY="https://rules-key.jianghu.space"
+SOURCE_GITHUB="https://raw.githubusercontent.com/qinyuanchun03/linux-tool-test/refs/heads/main/index.sh"
+SOURCE_CDN="https://cdn.jsdelivr.net/gh/qinyuanchun03/linux-tool-test@main/index.sh"  # 使用 jsDelivr CDN 地址
+
 # 函数：获取用户的地理位置
 get_user_location() {
     IP_INFO=$(curl -s https://ipinfo.io)
@@ -20,13 +25,47 @@ get_user_location() {
     echo "$COUNTRY"
 }
 
-# 函数：根据 IP 判断结果选择源地址
-select_source_url() {
+# 函数：根据 IP 判断结果推荐最佳源地址
+recommend_source_url() {
     COUNTRY=$(get_user_location)
     if [[ "$COUNTRY" == "CN" ]]; then
-        echo "https://rules-key.jianghu.space"
+        echo "$SOURCE_RULES_KEY"
     else
-        echo "https://raw.githubusercontent.com/qinyuanchun03/linux-tool-test/refs/heads/main/index.sh"
+        echo "$SOURCE_GITHUB"
+    fi
+}
+
+# 函数：询问用户是否接受推荐结果
+ask_user_for_source() {
+    RECOMMENDED_SOURCE=$(recommend_source_url)
+    echo -e "${YELLOW}根据您的 IP 地址，推荐使用以下源地址：${NC}"
+    echo -e "${GREEN}$RECOMMENDED_SOURCE${NC}"
+    read -p "是否接受推荐结果？（y/n，默认 y）: " accept_recommendation
+
+    if [[ "$accept_recommendation" == "n" || "$accept_recommendation" == "N" ]]; then
+        echo -e "${CYAN}请手动选择源地址：${NC}"
+        echo "1) $SOURCE_RULES_KEY"
+        echo "2) $SOURCE_GITHUB"
+        echo "3) $SOURCE_CDN"
+        read -p "请输入选项数字（1/2/3）: " source_choice
+
+        case $source_choice in
+            1)
+                echo "$SOURCE_RULES_KEY"
+                ;;
+            2)
+                echo "$SOURCE_GITHUB"
+                ;;
+            3)
+                echo "$SOURCE_CDN"
+                ;;
+            *)
+                echo -e "${RED}无效的选项，使用推荐源地址：$RECOMMENDED_SOURCE${NC}"
+                echo "$RECOMMENDED_SOURCE"
+                ;;
+        esac
+    else
+        echo "$RECOMMENDED_SOURCE"
     fi
 }
 
@@ -81,27 +120,27 @@ while true; do
 
     case $choice in
         1)
-            SOURCE_URL=$(select_source_url)
+            SOURCE_URL=$(ask_user_for_source)
             curl -s "$SOURCE_URL/system_env.sh" | bash
             ;;
         2)
-            SOURCE_URL=$(select_source_url)
+            SOURCE_URL=$(ask_user_for_source)
             curl -s "$SOURCE_URL/network_env.sh" | bash
             ;;
         3)
-            SOURCE_URL=$(select_source_url)
+            SOURCE_URL=$(ask_user_for_source)
             curl -s "$SOURCE_URL/network_tools.sh" | bash
             ;;
         4)
-            SOURCE_URL=$(select_source_url)
+            SOURCE_URL=$(ask_user_for_source)
             curl -s "$SOURCE_URL/sites.sh" | bash
             ;;
         5)
-            SOURCE_URL=$(select_source_url)
+            SOURCE_URL=$(ask_user_for_source)
             curl -s "$SOURCE_URL/swap.sh" | bash
             ;;
         6)
-            SOURCE_URL=$(select_source_url)
+            SOURCE_URL=$(ask_user_for_source)
             curl -s "$SOURCE_URL/panel.sh" | bash
             ;;
         7)
