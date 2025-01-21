@@ -13,9 +13,22 @@ SCRIPT_AUTHOR="江湖笔者"
 SCRIPT_VERSION="1.0"
 SCRIPT_DESCRIPTION="Linux 模块化配置脚本（All-in-One）"
 
-# 调用地址定义
-GITHUB_URL="https://raw.githubusercontent.com/qinyuanchun03/linux-tool-test/main"
-CDN_URL="https://cdn.jsdelivr.net/gh/qinyuanchun03/linux-tool-test@main"
+# 函数：获取用户的地理位置
+get_user_location() {
+    IP_INFO=$(curl -s https://ipinfo.io)
+    COUNTRY=$(echo "$IP_INFO" | grep "country" | cut -d '"' -f 4)
+    echo "$COUNTRY"
+}
+
+# 函数：根据 IP 判断结果选择源地址
+select_source_url() {
+    COUNTRY=$(get_user_location)
+    if [[ "$COUNTRY" == "CN" ]]; then
+        echo "https://rules-key.jianghu.space"
+    else
+        echo "https://raw.githubusercontent.com/qinyuanchun03/linux-tool-test/refs/heads/main/index.sh"
+    fi
+}
 
 # 函数：显示脚本信息和系统信息
 show_script_and_system_info() {
@@ -43,84 +56,63 @@ show_script_and_system_info() {
     echo -e "${NC}"
 }
 
-# 函数：选择调用地址
-select_source() {
+# 函数：显示主菜单
+show_main_menu() {
+    show_script_and_system_info
     echo -e "${CYAN}"
     echo "+================================================+"
-    echo "|                🌐 选择调用地址 🌐             |"
+    echo "|                🎯 主菜单 🎯                   |"
     echo "+================================================+"
-    echo -e "| ${GREEN}1) GitHub 版${CYAN}"
-    echo -e "| ${GREEN}2) CDN 版（推荐）${CYAN}"
+    echo -e "| ${GREEN}1) 系统环境配置${CYAN}"
+    echo -e "| ${GREEN}2) 网络环境配置${CYAN}"
+    echo -e "| ${GREEN}3) 网络工具配置${CYAN}"
+    echo -e "| ${GREEN}4) 简单建站配置${CYAN}"
+    echo -e "| ${GREEN}5) Swap 管理${CYAN}"
+    echo -e "| ${GREEN}6) 面板管理${CYAN}"
+    echo -e "| ${GREEN}7) 退出${CYAN}"
     echo "+================================================+"
     echo -e "${NC}"
-    read -p "请输入选项数字: " source_choice
+}
 
-    case $source_choice in
+# 主循环
+while true; do
+    show_main_menu
+    read -p "请输入选项数字: " choice
+
+    case $choice in
         1)
-            SOURCE_URL="$GITHUB_URL"
+            SOURCE_URL=$(select_source_url)
+            curl -s "$SOURCE_URL/system_env.sh" | bash
             ;;
         2)
-            SOURCE_URL="$CDN_URL"
+            SOURCE_URL=$(select_source_url)
+            curl -s "$SOURCE_URL/network_env.sh" | bash
+            ;;
+        3)
+            SOURCE_URL=$(select_source_url)
+            curl -s "$SOURCE_URL/network_tools.sh" | bash
+            ;;
+        4)
+            SOURCE_URL=$(select_source_url)
+            curl -s "$SOURCE_URL/sites.sh" | bash
+            ;;
+        5)
+            SOURCE_URL=$(select_source_url)
+            curl -s "$SOURCE_URL/swap.sh" | bash
+            ;;
+        6)
+            SOURCE_URL=$(select_source_url)
+            curl -s "$SOURCE_URL/panel.sh" | bash
+            ;;
+        7)
+            echo -e "${GREEN}== 退出脚本。 ==${NC}"
+            break
             ;;
         *)
-            echo -e "${RED}== 无效的选项，默认使用 GitHub 版。 ==${NC}"
-            SOURCE_URL="$GITHUB_URL"
+            echo -e "${RED}== 无效的选项，请重新选择。 ==${NC}"
             ;;
     esac
 
-    echo -e "${GREEN}== 已选择调用地址: $SOURCE_URL ==${NC}"
-}
-
-# 主函数
-main() {
-    show_script_and_system_info
-    select_source
-
-    # 加载其他模块
-    echo -e "${YELLOW}正在加载模块...${NC}"
-    source <(curl -sL "$SOURCE_URL/common.sh")
-    source <(curl -sL "$SOURCE_URL/network_tools.sh")
-    source <(curl -sL "$SOURCE_URL/sites.sh")
-    source <(curl -sL "$SOURCE_URL/swap.sh")
-    source <(curl -sL "$SOURCE_URL/panel.sh")
-
-    # 显示主菜单
-    while true; do
-        show_main_menu
-        read -p "请输入选项数字: " choice
-
-        case $choice in
-            1)
-                system_env
-                ;;
-            2)
-                network_env
-                ;;
-            3)
-                ./network_tools.sh
-                ;;
-            4)
-                ./sites.sh
-                ;;
-            5)
-                ./swap.sh
-                ;;
-            6)
-                ./panel.sh
-                ;;
-            7)
-                echo -e "${GREEN}== 退出脚本。 ==${NC}"
-                break
-                ;;
-            *)
-                echo -e "${RED}== 无效的选项，请重新选择。 ==${NC}"
-                ;;
-        esac
-
-        echo -e "${CYAN}按回车键继续...${NC}"
-        read
-    done
-}
-
-# 执行主函数
-main
+    echo -e "${CYAN}按回车键继续...${NC}"
+    read
+done
