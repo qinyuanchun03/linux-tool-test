@@ -82,13 +82,15 @@ call_subscript() {
 
 # 函数：显示脚本信息和系统信息
 show_script_and_system_info() {
+    COUNTRY=$(get_user_location)
     echo -e "${CYAN}"
     echo "+================================================+"
     echo "|                🛠️ 脚本信息 🛠️                 |"
     echo "+================================================+"
     echo -e "| 脚本作者: ${GREEN}$SCRIPT_AUTHOR${CYAN}"
     echo -e "| 脚本版本: ${GREEN}$SCRIPT_VERSION${CYAN}"
-    echo -e "| 脚本用途: ${GREEN}$SCRIPT_DESCRIPTION${CYAN}"
+    echo -e "| 脚本用途: ${GREEN}$SCRIPT_DESCRIPTION${NC}"
+    echo -e "| 检测到您的 IP 所在国家: ${GREEN}$COUNTRY${CYAN}"
     echo "+------------------------------------------------+"
     echo -e "|                🖥️ 系统信息 🖥️                 |"
     echo "+------------------------------------------------+"
@@ -126,6 +128,9 @@ show_main_menu() {
 
 # 主循环
 main() {
+    # 清除可能影响脚本运行的缓存
+    unset SELECTED_SOURCE
+
     # 仅在脚本开始时询问源地址
     ask_user_for_source
 
@@ -161,7 +166,7 @@ main() {
                 ;;
         esac
 
-        echo -e "${CYAN}按回车键继续...${NC}"
+        echo -e "${CYAN}按回车键返回主菜单...${NC}"
         read
     done
 }
