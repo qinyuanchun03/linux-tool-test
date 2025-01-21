@@ -13,84 +13,19 @@ SCRIPT_AUTHOR="江湖笔者"
 SCRIPT_VERSION="1.0"
 SCRIPT_DESCRIPTION="Linux 模块化配置脚本（All-in-One）"
 
-# 源地址定义
-SOURCE_RULES_KEY="https://rules-key.jianghu.space"
-SOURCE_GITHUB="https://raw.githubusercontent.com/qinyuanchun03/linux-tool-test/refs/heads/main"
-SOURCE_CDN="https://cdn.jsdelivr.net/gh/qinyuanchun03/linux-tool-test@main"
-
-# 全局变量：用户选择的源地址
-SELECTED_SOURCE=""
-
-# 函数：获取用户的地理位置
-get_user_location() {
-    IP_INFO=$(curl -s https://ipinfo.io)
-    COUNTRY=$(echo "$IP_INFO" | grep "country" | cut -d '"' -f 4)
-    echo "$COUNTRY"
-}
-
-# 函数：根据 IP 判断结果推荐最佳源地址
-recommend_source_url() {
-    COUNTRY=$(get_user_location)
-    if [[ "$COUNTRY" == "CN" ]]; then
-        echo "$SOURCE_RULES_KEY"
-    else
-        echo "$SOURCE_GITHUB"
-    fi
-}
-
-# 函数：询问用户是否接受推荐结果
-ask_user_for_source() {
-    RECOMMENDED_SOURCE=$(recommend_source_url)
-    echo -e "${YELLOW}根据您的 IP 地址，推荐使用以下源地址：${NC}"
-    echo -e "${GREEN}$RECOMMENDED_SOURCE${NC}"
-    read -p "是否接受推荐结果？（y/n，默认 y）: " accept_recommendation
-
-    if [[ "$accept_recommendation" == "n" || "$accept_recommendation" == "N" ]]; then
-        echo -e "${CYAN}请手动选择源地址：${NC}"
-        echo "1) $SOURCE_RULES_KEY"
-        echo "2) $SOURCE_GITHUB"
-        echo "3) $SOURCE_CDN"
-        read -p "请输入选项数字（1/2/3）: " source_choice
-
-        case $source_choice in
-            1)
-                SELECTED_SOURCE="$SOURCE_RULES_KEY"
-                ;;
-            2)
-                SELECTED_SOURCE="$SOURCE_GITHUB"
-                ;;
-            3)
-                SELECTED_SOURCE="$SOURCE_CDN"
-                ;;
-            *)
-                echo -e "${RED}无效的选项，使用推荐源地址：$RECOMMENDED_SOURCE${NC}"
-                SELECTED_SOURCE="$RECOMMENDED_SOURCE"
-                ;;
-        esac
-    else
-        SELECTED_SOURCE="$RECOMMENDED_SOURCE"
-    fi
-}
-
-# 函数：调用子脚本
-call_subscript() {
-    local script_name=$1
-    local script_url="${SELECTED_SOURCE}/${script_name}"
-    echo -e "${CYAN}正在调用子脚本：${script_url}${NC}"
-    curl -s "$script_url" | bash
-}
+# 加载方式变量
+SOURCE_TYPE=""  # 用户选择的加载方式
+BASE_URL=""     # 基础 URL
 
 # 函数：显示脚本信息和系统信息
 show_script_and_system_info() {
-    COUNTRY=$(get_user_location)
     echo -e "${CYAN}"
     echo "+================================================+"
     echo "|                🛠️ 脚本信息 🛠️                 |"
     echo "+================================================+"
     echo -e "| 脚本作者: ${GREEN}$SCRIPT_AUTHOR${CYAN}"
     echo -e "| 脚本版本: ${GREEN}$SCRIPT_VERSION${CYAN}"
-    echo -e "| 脚本用途: ${GREEN}$SCRIPT_DESCRIPTION${NC}"
-    echo -e "| 检测到您的 IP 所在国家: ${GREEN}$COUNTRY${CYAN}"
+    echo -e "| 脚本用途: ${GREEN}$SCRIPT_DESCRIPTION${CYAN}"
     echo "+------------------------------------------------+"
     echo -e "|                🖥️ 系统信息 🖥️                 |"
     echo "+------------------------------------------------+"
@@ -108,68 +43,114 @@ show_script_and_system_info() {
     echo -e "${NC}"
 }
 
-# 函数：显示主菜单
-show_main_menu() {
-    show_script_and_system_info
+# 函数：显示调用方式选择菜单
+show_source_menu() {
     echo -e "${CYAN}"
     echo "+================================================+"
-    echo "|                🎯 主菜单 🎯                   |"
+    echo "|                🌐 选择调用方式 🌐             |"
     echo "+================================================+"
-    echo -e "| ${GREEN}1) 系统环境配置${CYAN}"
-    echo -e "| ${GREEN}2) 网络环境配置${CYAN}"
-    echo -e "| ${GREEN}3) 网络工具配置${CYAN}"
-    echo -e "| ${GREEN}4) 简单建站配置${CYAN}"
-    echo -e "| ${GREEN}5) Swap 管理${CYAN}"
-    echo -e "| ${GREEN}6) 面板管理${CYAN}"
-    echo -e "| ${GREEN}7) 退出${CYAN}"
+    echo -e "| ${GREEN}1) 使用 GitHub Raw 调用${CYAN}"
+    echo -e "| ${GREEN}2) 使用 jsDelivr 调用${CYAN}"
+    echo -e "| ${GREEN}3) 使用 Cloudflare 调用${CYAN}"
+    echo -e "| ${GREEN}4) 退出${CYAN}"
     echo "+================================================+"
     echo -e "${NC}"
 }
 
-# 主循环
-main() {
-    # 清除可能影响脚本运行的缓存
-    unset SELECTED_SOURCE
+# 函数：设置基础 URL
+set_base_url() {
+    local source_choice=$1
+    case $source_choice in
+        1)
+            SOURCE_TYPE="GitHub Raw"
+            BASE_URL="https://github.com/qinyuanchun03/linux-tool-test/raw/main"
+            ;;
+        2)
+            SOURCE_TYPE="jsDelivr"
+            BASE_URL="https://cdn.jsdelivr.net/gh/qinyuanchun03/linux-tool-test@main"
+            ;;
+        3)
+            SOURCE_TYPE="Cloudflare"
+            BASE_URL="https://rules-key.jianghu.space"
+            ;;
+        *)
+            echo -e "${RED}无效的选项，请重新选择。${NC}"
+            return 1
+            ;;
+    esac
+    echo -e "${GREEN}已选择加载方式: ${SOURCE_TYPE}${NC}"
+    return 0
+}
 
-    # 仅在脚本开始时询问源地址
-    ask_user_for_source
+# 函数：加载子菜单脚本
+load_submenu() {
+    local submenu_name=$1
+    local submenu_url="${BASE_URL}/${submenu_name}"
+    echo -e "${YELLOW}正在加载子菜单: ${submenu_name}...${NC}"
+    bash <(curl -sL "${submenu_url}")
+}
 
+# 函数：显示主菜单
+show_main_menu() {
     while true; do
-        show_main_menu
+        echo -e "${CYAN}"
+        echo "+================================================+"
+        echo "|                🎯 主菜单 🎯                   |"
+        echo "+================================================+"
+        echo -e "| ${GREEN}1) 系统环境配置${CYAN}"
+        echo -e "| ${GREEN}2) 网络环境配置${CYAN}"
+        echo -e "| ${GREEN}3) 网络工具配置${CYAN}"
+        echo -e "| ${GREEN}4) 简单建站配置${CYAN}"
+        echo -e "| ${GREEN}5) Swap 管理${CYAN}"
+        echo -e "| ${GREEN}6) 面板管理${CYAN}"
+        echo -e "| ${GREEN}7) 退出${CYAN}"
+        echo "+================================================+"
+        echo -e "${NC}"
         read -p "请输入选项数字: " choice
 
         case $choice in
             1)
-                call_subscript "system_env.sh"
+                load_submenu "system_env.sh"
                 ;;
             2)
-                call_subscript "network_env.sh"
+                load_submenu "network_env.sh"
                 ;;
             3)
-                call_subscript "network_tools.sh"
+                load_submenu "network_tools.sh"
                 ;;
             4)
-                call_subscript "sites.sh"
+                load_submenu "sites.sh"
                 ;;
             5)
-                call_subscript "swap.sh"
+                load_submenu "swap.sh"
                 ;;
             6)
-                call_subscript "panel.sh"
+                load_submenu "panel.sh"
                 ;;
             7)
-                echo -e "${GREEN}== 退出脚本。 ==${NC}"
-                break
+                echo -e "${GREEN}退出脚本。${NC}"
+                exit 0
                 ;;
             *)
-                echo -e "${RED}== 无效的选项，请重新选择。 ==${NC}"
+                echo -e "${RED}无效的选项，请重新选择。${NC}"
                 ;;
         esac
 
-        echo -e "${CYAN}按回车键返回主菜单...${NC}"
+        echo -e "${CYAN}按回车键继续...${NC}"
         read
     done
 }
 
-# 执行主函数
-main
+# 主循环
+while true; do
+    show_script_and_system_info
+    show_source_menu
+    read -p "请输入选项数字: " source_choice
+
+    if set_base_url "$source_choice"; then
+        show_main_menu
+    fi
+
+    echo -e "${CYAN}按回车键继续...${NC}"
+    read
+done
